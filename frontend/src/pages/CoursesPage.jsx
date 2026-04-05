@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getCourseCategoriesRequest, getCoursesRequest } from '../api/courses'
 import CourseCard from '../components/common/CourseCard.jsx'
 import FeedbackMessage from '../components/common/FeedbackMessage.jsx'
@@ -7,14 +8,38 @@ import { defaultCourseFilters } from '../data/content'
 import { buildCourseCardModel } from '../lib/courseUi'
 
 function CoursesPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [categories, setCategories] = useState(defaultCourseFilters)
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [sort, setSort] = useState('newest')
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '')
   const [catalog, setCatalog] = useState([])
   const [pageInfo, setPageInfo] = useState({ totalItems: 0, totalPages: 1, currentPage: 0 })
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    const nextSearch = searchParams.get('search') ?? ''
+    if (nextSearch !== search) {
+      setSearch(nextSearch)
+    }
+  }, [search, searchParams])
+
+  useEffect(() => {
+    const currentSearch = searchParams.get('search') ?? ''
+    if (currentSearch === search) {
+      return
+    }
+
+    const nextParams = new URLSearchParams(searchParams)
+    if (search) {
+      nextParams.set('search', search)
+    } else {
+      nextParams.delete('search')
+    }
+
+    setSearchParams(nextParams, { replace: true })
+  }, [search, searchParams, setSearchParams])
 
   useEffect(() => {
     async function loadStaticBits() {
