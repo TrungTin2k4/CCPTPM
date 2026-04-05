@@ -5,3 +5,4 @@ const config = {
 };
 
 export default config;
+// Default ignores of eslint-config-next:// Default ignores of eslint-config-next:// Default ignores of eslint-config-next:// Default ignores of eslint-config-next:// Default ignores of eslint-config-next:
