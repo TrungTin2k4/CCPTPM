@@ -91,10 +91,10 @@ function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-5">
-      <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:gap-5">
-        <Link className="inline-flex shrink-0 items-center gap-3 no-underline" to="/">
+      <div className="flex min-w-0 flex-wrap items-center gap-3 lg:flex-nowrap lg:gap-5">
+        <Link className="inline-flex min-w-0 shrink-0 items-center gap-3 no-underline" to="/">
           <img alt="EduLearn logo" className="h-11 w-11 rounded-xl object-cover" src="/edulearn-logo.svg" />
-          <span className="type-title-lg text-ink-950 whitespace-nowrap">EduLearn</span>
+          <span className="type-title-lg text-ink-950 hidden whitespace-nowrap sm:inline">EduLearn</span>
         </Link>
 
         <nav className="hidden items-center gap-4 lg:flex">
@@ -112,11 +112,11 @@ function Navbar() {
           ))}
         </nav>
 
-        <div className="order-3 relative w-full lg:order-none lg:ml-auto lg:w-auto lg:min-w-[18rem] lg:flex-1 lg:max-w-[36rem]">
-          <form className="flex min-h-[50px] items-center gap-3 rounded-full border border-line bg-[#f7f7fb] px-4" onSubmit={submitSearch}>
+        <div className="order-3 relative w-full min-w-0 lg:order-none lg:ml-auto lg:w-auto lg:min-w-[18rem] lg:flex-1 lg:max-w-[36rem]">
+          <form className="flex min-h-[50px] min-w-0 items-center gap-3 rounded-full border border-line bg-[#f7f7fb] px-4" onSubmit={submitSearch}>
             <Icon name="search" className="h-5 w-5 text-ink-500" />
             <input
-              className="w-full border-none bg-transparent text-sm text-ink-950 outline-none"
+              className="w-full min-w-0 border-none bg-transparent text-sm text-ink-950 outline-none"
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -173,7 +173,7 @@ function Navbar() {
           ) : null}
         </div>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
           {!isAdmin ? (
             <Link aria-label="Checkout" className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line text-ink-950 no-underline" to="/checkout">
               <Icon name="checkout" className="h-5 w-5" />
@@ -183,7 +183,7 @@ function Navbar() {
           {user ? (
             <details className="avatar-menu">
               <summary className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line bg-white px-2 py-1.5">
-                <span className="max-w-[7rem] truncate whitespace-nowrap text-sm font-semibold text-ink-950">{user.fullName}</span>
+                <span className="hidden max-w-[7rem] truncate whitespace-nowrap text-sm font-semibold text-ink-950 sm:inline">{user.fullName}</span>
                 {user.avatarUrl ? (
                   <img alt={user.fullName} className="h-9 w-9 rounded-full object-cover" src={resolveMediaUrl(user.avatarUrl)} />
                 ) : (

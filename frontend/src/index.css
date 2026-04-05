@@ -1391,6 +1391,13 @@
   }
 }
 
+@media (max-width: 767px) {
+  .filter-pills,
+  .sort-chip-row {
+    @apply flex-nowrap overflow-x-auto pb-1;
+  }
+}
+
 @media (max-width: 640px) {
   .home-hero-shell,
   .home-editorial-shell,
