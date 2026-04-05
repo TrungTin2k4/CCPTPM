@@ -26,6 +26,24 @@ The API keeps the same route structure and business rules used by the Java versi
 cp .env.example .env.local
 ```
 
+Required env vars for deploy pipelines (build/start):
+
+- `MONGODB_URI`
+- `MONGODB_DB`
+- `JWT_SECRET` (minimum 32 chars)
+
+Common optional vars:
+
+- `JWT_EXPIRATION`
+- `CORS_ALLOWED_ORIGINS`
+- `CORS_ALLOWED_METHODS`
+- `CORS_ALLOWED_HEADERS`
+- `CORS_ALLOW_CREDENTIALS`
+- `PASSWORD_RESET_TOKEN_EXPIRATION_MINUTES`
+- `PASSWORD_RESET_DEBUG_RETURN_TOKEN`
+- `APP_PROFILE`
+- `UPLOAD_MAX_FILE_SIZE_BYTES`
+
 2) Install dependencies:
 
 ```bash
