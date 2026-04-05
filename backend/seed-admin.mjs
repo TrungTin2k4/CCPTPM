@@ -35,12 +35,28 @@ const User = mongoose.models.User ?? mongoose.model('User', userSchema)
 const adminEmail = 'admin@edulearn.local'
 const adminPassword = 'Admin@123456'
 
+function isDuplicateKeyError(error) {
+  return Boolean(error && typeof error === 'object' && error.code === 11000)
+}
+
+async function upsertUserByEmail(email, update) {
+  try {
+    await User.updateOne({ email }, update, { upsert: true })
+  } catch (error) {
+    if (!isDuplicateKeyError(error)) {
+      throw error
+    }
+
+    await User.updateOne({ email }, update)
+  }
+}
+
 await mongoose.connect(mongoUri, { dbName })
 
 const passwordHash = await bcrypt.hash(adminPassword, 10)
 
-await User.updateOne(
-  { email: adminEmail },
+await upsertUserByEmail(
+  adminEmail,
   {
     $set: {
       email: adminEmail,
@@ -56,7 +72,6 @@ await User.updateOne(
       avatarUrl: null,
     },
   },
-  { upsert: true },
 )
 
 console.log('Admin account ready')

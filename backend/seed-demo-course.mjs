@@ -58,6 +58,33 @@ const courseSchema = new mongoose.Schema(
 
 const Course = mongoose.models.Course ?? mongoose.model('Course', courseSchema)
 
+function isDuplicateKeyError(error) {
+  return Boolean(error && typeof error === 'object' && error.code === 11000)
+}
+
+async function upsertCourseBySlug(course) {
+  try {
+    await Course.updateOne(
+      { slug: course.slug },
+      {
+        $set: course,
+      },
+      { upsert: true },
+    )
+  } catch (error) {
+    if (!isDuplicateKeyError(error)) {
+      throw error
+    }
+
+    await Course.updateOne(
+      { slug: course.slug },
+      {
+        $set: course,
+      },
+    )
+  }
+}
+
 function makeLesson(title, duration, isPreview = false) {
   return {
     id: randomUUID(),
@@ -212,13 +239,7 @@ const courses = [
 await mongoose.connect(mongoUri, { dbName })
 
 for (const course of courses) {
-  await Course.updateOne(
-    { slug: course.slug },
-    {
-      $set: course,
-    },
-    { upsert: true },
-  )
+  await upsertCourseBySlug(course)
 }
 
 console.log(`Seeded ${courses.length} demo courses`)
