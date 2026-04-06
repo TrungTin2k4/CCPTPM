@@ -4,8 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 8080",
+    "dev:staging": "node scripts/run-node-with-env.mjs .env.staging ./node_modules/next/dist/bin/next dev -p 8081",
     "build": "next build",
+    "build:staging": "node scripts/run-node-with-env.mjs .env.staging ./node_modules/next/dist/bin/next build",
     "start": "next start -p 8080",
+    "start:staging": "node scripts/run-node-with-env.mjs .env.staging ./node_modules/next/dist/bin/next start -p 8081",
     "lint": "eslint"
   },
   "dependencies": {
