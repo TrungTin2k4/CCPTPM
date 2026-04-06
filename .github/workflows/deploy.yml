@@ -1,0 +1,88 @@
+name: CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub environment to deploy to
+        required: true
+        default: production
+        type: choice
+        options:
+          - staging
+          - production
+      ref:
+        description: Git ref to deploy
+        required: true
+        default: main
+        type: string
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    env:
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_RESTART_COMMAND: ${{ secrets.DEPLOY_RESTART_COMMAND }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate deploy secrets
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_PORT"
+          test -n "$DEPLOY_USER"
+          test -n "$DEPLOY_PATH"
+          test -n "$DEPLOY_RESTART_COMMAND"
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add server to known_hosts
+        run: ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync repository
+        run: |
+          rsync -az --delete \
+            --exclude ".git" \
+            --exclude "backend/node_modules" \
+            --exclude "frontend/node_modules" \
+            --exclude "backend/.next" \
+            --exclude "frontend/dist" \
+            -e "ssh -p $DEPLOY_PORT" \
+            ./ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+      - name: Install, build, and restart on server
+        run: |
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "
+            set -e
+            cd '$DEPLOY_PATH/backend'
+            npm ci
+            npm run build
+            cd '$DEPLOY_PATH/frontend'
+            npm ci
+            npm run build
+            cd '$DEPLOY_PATH'
+            $DEPLOY_RESTART_COMMAND
+          "
