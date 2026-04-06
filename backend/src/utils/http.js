@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { buildCorsHeaders } from "@/utils/cors";
 import { AppError, ValidationError } from "@/utils/errors";
+import { buildRequestLogMeta, getRequestId, logError, logInfo, logWarn } from "@/utils/logger";
 function mapZodError(error) {
     const fieldErrors = {};
     for (const issue of error.issues) {
@@ -36,6 +37,7 @@ function isMongooseCastError(error) {
 }
 function makeJsonResponse(request, payload, status, extraHeaders) {
     const headers = buildCorsHeaders(request);
+    headers.set("x-request-id", getRequestId(request));
     if (extraHeaders) {
         for (const [key, value] of Object.entries(extraHeaders)) {
             headers.set(key, value);
@@ -53,29 +55,72 @@ export function fail(request, status, message, data, extraHeaders) {
     return makeJsonResponse(request, buildErrorPayload(message, data), status, extraHeaders);
 }
 export function handleError(request, error) {
+    const requestMeta = buildRequestLogMeta(request);
+
     if (error instanceof ValidationError) {
+        logWarn("Request validation failed", {
+            ...requestMeta,
+            status: error.status,
+            details: error.data,
+        });
         return fail(request, error.status, error.message, error.data);
     }
     if (error instanceof ZodError) {
-        return fail(request, 400, "Validation failed", mapZodError(error));
+        const details = mapZodError(error);
+        logWarn("Request schema validation failed", {
+            ...requestMeta,
+            status: 400,
+            details,
+        });
+        return fail(request, 400, "Validation failed", details);
     }
     if (error instanceof AppError) {
+        logWarn("Request failed", {
+            ...requestMeta,
+            status: error.status,
+            details: error.data,
+        });
         return fail(request, error.status, error.message, error.data, error.headers);
     }
     if (isMongooseCastError(error)) {
+        logWarn("Invalid database identifier", {
+            ...requestMeta,
+            status: 400,
+        });
         return fail(request, 400, "Invalid request parameters");
     }
     if (error instanceof SyntaxError) {
+        logWarn("Invalid request syntax", {
+            ...requestMeta,
+            status: 400,
+        });
         return fail(request, 400, "Invalid request body");
     }
-    console.error("Unexpected server error", error);
+    logError("Unexpected server error", error, {
+        ...requestMeta,
+        status: 500,
+    });
     return fail(request, 500, "An unexpected error occurred");
 }
 export async function withErrorHandling(request, handler) {
+    const startedAt = Date.now();
+
     try {
-        return await handler();
+        const response = await handler();
+        logInfo("Request completed", {
+            ...buildRequestLogMeta(request),
+            status: response.status,
+            durationMs: Date.now() - startedAt,
+        });
+        return response;
     }
     catch (error) {
-        return handleError(request, error);
+        const response = handleError(request, error);
+        logInfo("Request completed", {
+            ...buildRequestLogMeta(request),
+            status: response.status,
+            durationMs: Date.now() - startedAt,
+        });
+        return response;
     }
 }
