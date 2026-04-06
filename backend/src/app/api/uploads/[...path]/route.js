@@ -1,6 +1,9 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
+import { buildCorsHeaders, corsPreflight } from "@/utils/cors";
+import { NotFoundError } from "@/utils/errors";
+import { withErrorHandling } from "@/utils/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,51 +17,50 @@ const MIME_TYPES = new Map([
     ["svg", "image/svg+xml"],
 ]);
 
-const CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-};
+const ALLOWED_METHODS = "GET, OPTIONS";
 
-export async function OPTIONS() {
-    return new NextResponse(null, { status: 200, headers: CORS_HEADERS });
+export async function OPTIONS(request) {
+    return corsPreflight(request, ALLOWED_METHODS);
 }
 
-export async function GET(_request, context) {
-    const { path: segments } = await context.params;
-    if (!segments || segments.length === 0) {
-        return NextResponse.json({ error: "Not found" }, { status: 404, headers: CORS_HEADERS });
-    }
-
-    const relativePath = segments.join("/");
-
-    // Security: block directory traversal
-    if (relativePath.includes("..")) {
-        return NextResponse.json({ error: "Not found" }, { status: 404, headers: CORS_HEADERS });
-    }
-
-    const ext = path.extname(relativePath).replace(".", "").toLowerCase();
-    const mimeType = MIME_TYPES.get(ext);
-    if (!mimeType) {
-        return NextResponse.json({ error: "Not found" }, { status: 404, headers: CORS_HEADERS });
-    }
-
-    const absolutePath = path.join(process.cwd(), "public", "uploads", ...segments);
-
-    try {
-        const fileBuffer = await readFile(absolutePath);
-        return new NextResponse(fileBuffer, {
-            status: 200,
-            headers: {
-                "Content-Type": mimeType,
-                "Cache-Control": "public, max-age=31536000, immutable",
-                ...CORS_HEADERS,
-            },
-        });
-    } catch (error) {
-        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-            return NextResponse.json({ error: "Not found" }, { status: 404, headers: CORS_HEADERS });
+export async function GET(request, context) {
+    return withErrorHandling(request, async () => {
+        const { path: segments } = await context.params;
+        if (!segments || segments.length === 0) {
+            throw new NotFoundError("File not found");
         }
-        return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: CORS_HEADERS });
-    }
+
+        const relativePath = segments.join("/");
+
+        // Security: block directory traversal
+        if (relativePath.includes("..")) {
+            throw new NotFoundError("File not found");
+        }
+
+        const ext = path.extname(relativePath).replace(".", "").toLowerCase();
+        const mimeType = MIME_TYPES.get(ext);
+        if (!mimeType) {
+            throw new NotFoundError("File not found");
+        }
+
+        const absolutePath = path.join(process.cwd(), "public", "uploads", ...segments);
+
+        try {
+            const fileBuffer = await readFile(absolutePath);
+            const headers = buildCorsHeaders(request, ALLOWED_METHODS);
+            headers.set("Content-Type", mimeType);
+            headers.set("Cache-Control", "public, max-age=31536000, immutable");
+
+            return new NextResponse(fileBuffer, {
+                status: 200,
+                headers,
+            });
+        }
+        catch (error) {
+            if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+                throw new NotFoundError("File not found");
+            }
+            throw error;
+        }
+    });
 }

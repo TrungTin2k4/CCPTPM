@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { buildCorsHeaders } from "@/utils/cors";
 import { AppError, ValidationError } from "@/utils/errors";
+
 function mapZodError(error) {
     const fieldErrors = {};
     for (const issue of error.issues) {
@@ -12,6 +13,17 @@ function mapZodError(error) {
     }
     return fieldErrors;
 }
+
+function mapMongooseValidationError(error) {
+    const fieldErrors = {};
+    for (const [field, issue] of Object.entries(error.errors)) {
+        if (issue && typeof issue === "object" && "message" in issue && typeof issue.message === "string") {
+            fieldErrors[field] = issue.message;
+        }
+    }
+    return fieldErrors;
+}
+
 function buildSuccessPayload(data, message) {
     return {
         success: true,
@@ -34,6 +46,44 @@ function isMongooseCastError(error) {
         "name" in error &&
         error.name === "CastError");
 }
+
+function isMongooseValidationError(error) {
+    return Boolean(error &&
+        typeof error === "object" &&
+        "name" in error &&
+        "errors" in error &&
+        error.name === "ValidationError");
+}
+
+function isMongoDuplicateKeyError(error) {
+    return Boolean(error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === 11000);
+}
+
+function getDuplicateKeyErrorData(error) {
+    if (!(error && typeof error === "object" && "keyPattern" in error && error.keyPattern && typeof error.keyPattern === "object")) {
+        return undefined;
+    }
+    const [field] = Object.keys(error.keyPattern);
+    if (!field) {
+        return undefined;
+    }
+    return {
+        [field]: `${field} already exists`,
+    };
+}
+
+function logUnexpectedServerError(request, error) {
+    console.error("Unexpected server error", {
+        method: request.method,
+        path: request.nextUrl.pathname,
+        search: request.nextUrl.search,
+        error,
+    });
+}
+
 function makeJsonResponse(request, payload, status, extraHeaders) {
     const headers = buildCorsHeaders(request);
     if (extraHeaders) {
@@ -62,13 +112,19 @@ export function handleError(request, error) {
     if (error instanceof AppError) {
         return fail(request, error.status, error.message, error.data, error.headers);
     }
+    if (isMongooseValidationError(error)) {
+        return fail(request, 400, "Validation failed", mapMongooseValidationError(error));
+    }
+    if (isMongoDuplicateKeyError(error)) {
+        return fail(request, 409, "Resource already exists", getDuplicateKeyErrorData(error));
+    }
     if (isMongooseCastError(error)) {
         return fail(request, 400, "Invalid request parameters");
     }
     if (error instanceof SyntaxError) {
         return fail(request, 400, "Invalid request body");
     }
-    console.error("Unexpected server error", error);
+    logUnexpectedServerError(request, error);
     return fail(request, 500, "An unexpected error occurred");
 }
 export async function withErrorHandling(request, handler) {
