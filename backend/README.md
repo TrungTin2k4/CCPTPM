@@ -45,6 +45,39 @@ npm run build
 npm run start
 ```
 
+## Staging
+
+Use the committed staging template as a safe starting point:
+
+```bash
+cp .env.staging.example .env.staging
+```
+
+Recommended staging defaults:
+
+- Backend URL: `http://localhost:8081`
+- Frontend staging URL: `http://localhost:4173`
+- Mongo database: `edulearn_staging`
+
+Run backend with the staging profile:
+
+```bash
+npm run dev:staging
+```
+
+Or build and start the staging server:
+
+```bash
+npm run build:staging
+npm run start:staging
+```
+
+Notes:
+
+- `APP_PROFILE=staging` keeps password reset debug tokens disabled by default.
+- `CORS_ALLOWED_ORIGINS` should include your frontend staging origin before deployment.
+- Replace the placeholder `JWT_SECRET` before using staging outside local development.
+
 ## Swagger Testing
 
 - Swagger UI: `http://localhost:8080/api-docs`

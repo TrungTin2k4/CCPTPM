@@ -32,12 +32,27 @@ npm install
 npm run dev
 ```
 
+Local env template:
+
+```bash
+cp .env.example .env.local
+```
+
+Staging env template:
+
+```bash
+cp .env.staging.example .env.staging
+```
+
 ## Useful Commands
 
 ```bash
 npm run build
 npm run lint
 npm run preview
+npm run dev:staging
+npm run build:staging
+npm run preview:staging
 ```
 
 ## Backend Requirement
@@ -56,6 +71,12 @@ Recommended backend local config:
 - `MONGODB_URI=mongodb://127.0.0.1:27017`
 - `MONGODB_DB=edulearn`
 - `JWT_SECRET=...`
+
+Recommended staging config:
+
+- Frontend staging: `frontend/.env.staging`
+- Backend staging: `backend/.env.staging`
+- `VITE_API_BASE_URL=http://localhost:8081`
 
 ## Test Accounts
 
