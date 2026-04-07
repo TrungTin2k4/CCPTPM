@@ -6,7 +6,10 @@
     "dev": "next dev -p 8080",
     "build": "next build",
     "start": "next start -p 8080",
-    "lint": "eslint"
+    "lint": "eslint",
+    "health:check": "node ./scripts/health-check.mjs",
+    "monitor:release": "node ./scripts/monitor-release.mjs",
+    "rollback": "node ./scripts/rollback.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

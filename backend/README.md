@@ -45,6 +45,51 @@ npm run build
 npm run start
 ```
 
+## Monitoring, Health-check, Rollback
+
+- Liveness probe: `GET /api/health/live`
+- Readiness probe: `GET /api/health/ready`
+- Full health report: `GET /api/health`
+- Quick local check:
+
+```bash
+npm run health:check
+```
+
+- Continuous release monitor:
+
+```bash
+npm run monitor:release
+```
+
+Useful environment variables:
+
+- `BASE_URL`: backend base URL for scripts (default `http://127.0.0.1:8080`)
+- `HEALTH_PATH`: probe path override (default `/api/health`)
+- `HEALTH_TIMEOUT_MS`: timeout for `health:check` (default `5000`)
+- `MONITOR_INTERVAL_MS`: monitor interval in milliseconds (default `10000`)
+- `MONITOR_MAX_FAILURES`: consecutive failures before `monitor:release` exits non-zero (default `3`)
+
+Rollback script is intended for symlink-based deployments and must be configured explicitly before use:
+
+```bash
+RELEASES_DIR=/srv/edulearn/releases \
+CURRENT_LINK_PATH=/srv/edulearn/current \
+ROLLBACK_RESTART_COMMAND="pm2 restart edulearn-backend" \
+npm run rollback
+```
+
+Optional rollback variables:
+
+- `ROLLBACK_TARGET`: specific release directory name to roll back to
+- `ROLLBACK_HEALTH_COMMAND`: command to verify health after rollback (default `npm run health:check`)
+
+Rollback notes:
+
+- `CURRENT_LINK_PATH` must be a symbolic link, not a real directory
+- The script atomically repoints the symlink to the target release, optionally restarts the process, then runs a health check
+- Review target release contents and environment compatibility before executing rollback
+
 ## Swagger Testing
 
 - Swagger UI: `http://localhost:8080/api-docs`
